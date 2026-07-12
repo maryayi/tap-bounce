@@ -85,9 +85,9 @@
   const GRAVITY = 3000; // px/s^2 (at S=1)
   const JUMP_VELOCITY = 1080; // px/s (upward impulse)
   const BASE_SPEED = 360; // px/s scroll speed at start
-  const SPEED_RAMP = 11; // px/s added per second survived
-  const MAX_SPEED = 900; // px/s cap
-  const MIN_SPAWN_GAP = 1.0; // seconds between obstacles (keeps ground→air landable)
+  const SPEED_RAMP = 15; // px/s added per second survived
+  const MAX_SPEED = 1500; // px/s cap
+  const MIN_SPAWN_GAP = 0.85; // seconds between obstacles (keeps ground→air landable)
   const MAX_SPAWN_GAP = 1.65; // seconds between obstacles (slow/easy end)
   const RESTART_LOCKOUT = 0.35; // seconds before a tap can restart after dying
   const AIR_START_TIME = 6; // seconds before floating obstacles can appear
