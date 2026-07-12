@@ -2,6 +2,8 @@
   "name": "tap-bounce",
   "version": "0.2.0",
   "description": "A one-tap endless bouncer built with TypeScript + HTML5 Canvas.",
+  "author": "Mahdi Aryayi",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "build": "tsc",

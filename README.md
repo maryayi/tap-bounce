@@ -51,6 +51,7 @@ npm run serve      # static server without rebuilding
 | `game.ts` | Source of truth: loop, physics, spawning, collision, rendering, HUD. |
 | `game.js` | Compiled output referenced by `index.html` (generated from `game.ts`). |
 | `tsconfig.json` | Strict TypeScript config. |
+| `LICENSE` | MIT license. |
 
 ## How it works
 
@@ -88,3 +89,7 @@ Wrap the static files with [Capacitor](https://capacitorjs.com/) or ship as a
 [Trusted Web Activity](https://developer.chrome.com/docs/android/trusted-web-activity/).
 No code changes required — input already uses pointer/touch events and the
 layout is full-bleed with `viewport-fit=cover`.
+
+## License
+
+[MIT](LICENSE) © 2026 Mahdi Aryayi
