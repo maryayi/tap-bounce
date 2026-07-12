@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2019",
+    "module": "none",
+    "lib": ["DOM", "ES2019"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "forceConsistentCasingInFileNames": true,
+    "removeComments": false,
+    "noEmitOnError": true
+  },
+  "include": ["game.ts"]
+}

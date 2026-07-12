@@ -1,0 +1,15 @@
+{
+  "name": "tap-bounce",
+  "version": "0.2.0",
+  "description": "A one-tap endless bouncer built with TypeScript + HTML5 Canvas.",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "start": "npm run build && npx --yes serve -l 8080 .",
+    "serve": "npx --yes serve -l 8080 ."
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}
