@@ -1,5 +1,7 @@
 # Tap Bounce
 
+**Play now: [tap-bounce.aryayi.dev](https://tap-bounce.aryayi.dev/)**
+
 A one-tap endless bouncer. A ball runs along a scrolling track:
 
 - **Tap anywhere (or press Space)** to hop over the **red ground blocks** — with
