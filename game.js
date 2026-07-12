@@ -533,14 +533,15 @@
             const rad = Math.min(6 * S, o.w * 0.3);
             if (o.air) {
                 // Floating barrier — cyan curtain from the ceiling, with a bright
-                // bottom edge and teeth as a "roll under / don't jump" cue.
+                // bottom edge and teeth as a "roll under / don't jump" cue. The bottom
+                // is kept square (only the top corners are rounded) so the teeth attach
+                // to a clean, full-width baseline instead of clipping the rounded corners.
                 const edge = 6 * S;
                 ctx.fillStyle = '#3fd0ff';
-                roundRect(o.x, top, o.w, h, rad);
+                roundRectTop(o.x, top, o.w, h, rad);
                 ctx.fill();
                 ctx.fillStyle = 'rgba(255,255,255,0.35)';
-                roundRect(o.x, bottom - edge, o.w, edge, rad);
-                ctx.fill();
+                ctx.fillRect(o.x, bottom - edge, o.w, edge);
                 drawTeeth(o.x, bottom, o.w);
             }
             else {
@@ -736,6 +737,18 @@
         ctx.arcTo(x + w, y, x + w, y + h, r);
         ctx.arcTo(x + w, y + h, x, y + h, r);
         ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+    // Rounds only the top two corners; the bottom edge stays square/flush so
+    // shapes (like the barrier teeth) can attach to it cleanly.
+    function roundRectTop(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.lineTo(x + w, y + h);
+        ctx.lineTo(x, y + h);
+        ctx.lineTo(x, y + r);
         ctx.arcTo(x, y, x + w, y, r);
         ctx.closePath();
     }
