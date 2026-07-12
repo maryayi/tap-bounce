@@ -53,13 +53,16 @@
     let ballX = 0; // fixed horizontal position of the ball
     let ballR = 0; // ball radius
     let btn = { x: 0, y: 0, w: 0, h: 0 }; // pause button hit rect
+    let muteBtn = { x: 0, y: 0, w: 0, h: 0 }; // mute button hit rect
     function layout() {
         groundY = H * 0.82;
         ballX = W * 0.28;
         ballR = Math.max(10, Math.min(W, H) * 0.032);
         const size = Math.max(40, 46 * S);
         const margin = 16 * S;
+        const gapBtn = 14 * S;
         btn = { x: W - margin - size, y: margin, w: size, h: size };
+        muteBtn = { x: btn.x - gapBtn - size, y: margin, w: size, h: size };
     }
     // ---------------------------------------------------------------------------
     // Game state
@@ -100,6 +103,114 @@
         }
     }
     // ---------------------------------------------------------------------------
+    // Sound (procedural — no audio files). The AudioContext is created lazily on
+    // the first interaction to satisfy browser autoplay policies. A springy
+    // "boing" for jumps and a comedic descending "sad-trombone + thud" for crashes.
+    // Mute state persists on the device.
+    // ---------------------------------------------------------------------------
+    const MUTED_KEY = 'tapbounce.muted';
+    let muted = loadMuted();
+    let audioCtx = null;
+    function loadMuted() {
+        try {
+            return localStorage.getItem(MUTED_KEY) === '1';
+        }
+        catch (e) {
+            return false;
+        }
+    }
+    function saveMuted(v) {
+        try {
+            localStorage.setItem(MUTED_KEY, v ? '1' : '0');
+        }
+        catch (e) {
+            /* ignore */
+        }
+    }
+    function ensureAudio() {
+        if (!audioCtx) {
+            const Ctor = window.AudioContext ||
+                window
+                    .webkitAudioContext;
+            if (!Ctor)
+                return null;
+            try {
+                audioCtx = new Ctor();
+            }
+            catch (e) {
+                audioCtx = null;
+            }
+        }
+        if (audioCtx && audioCtx.state === 'suspended')
+            void audioCtx.resume();
+        return audioCtx;
+    }
+    function toggleMute() {
+        muted = !muted;
+        saveMuted(muted);
+        if (!muted)
+            ensureAudio(); // unlock audio on the same gesture
+    }
+    /** Springy cartoon "boing": a fast up-sweep with a little dip back down. */
+    function playJump() {
+        if (muted)
+            return;
+        const ac = ensureAudio();
+        if (!ac)
+            return;
+        const t = ac.currentTime;
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, t);
+        osc.frequency.exponentialRampToValueAtTime(780, t + 0.09);
+        osc.frequency.exponentialRampToValueAtTime(500, t + 0.2);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.5, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        osc.connect(gain).connect(ac.destination);
+        osc.start(t);
+        osc.stop(t + 0.24);
+    }
+    /** Comedy crash: a descending "sad trombone" tone plus a filtered noise thud. */
+    function playCrash() {
+        if (muted)
+            return;
+        const ac = ensureAudio();
+        if (!ac)
+            return;
+        const t = ac.currentTime;
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(440, t);
+        osc.frequency.exponentialRampToValueAtTime(70, t + 0.5);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.45, t + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+        osc.connect(gain).connect(ac.destination);
+        osc.start(t);
+        osc.stop(t + 0.62);
+        // Short filtered-noise "thud" at the moment of impact.
+        const dur = 0.16;
+        const buffer = ac.createBuffer(1, Math.floor(ac.sampleRate * dur), ac.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+        }
+        const noise = ac.createBufferSource();
+        noise.buffer = buffer;
+        const lp = ac.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 900;
+        const ng = ac.createGain();
+        ng.gain.setValueAtTime(0.55, t);
+        ng.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        noise.connect(lp).connect(ng).connect(ac.destination);
+        noise.start(t);
+        noise.stop(t + dur);
+    }
+    // ---------------------------------------------------------------------------
     // Run lifecycle
     // ---------------------------------------------------------------------------
     function resetRun() {
@@ -126,6 +237,7 @@
         state = 2 /* State.Over */;
         overTimer = 0;
         shake = 16 * S;
+        playCrash();
         spawnDeathParticles();
         if (score > best) {
             best = score;
@@ -144,18 +256,24 @@
         if (ball.onGround) {
             ball.vy = -JUMP_VELOCITY * S;
             ball.onGround = false;
+            playJump();
         }
     }
-    function inPauseButton(x, y) {
-        const pad = 8 * S; // generous touch target
-        return (x >= btn.x - pad &&
-            x <= btn.x + btn.w + pad &&
-            y >= btn.y - pad &&
-            y <= btn.y + btn.h + pad);
+    function inRect(x, y, rect) {
+        const pad = 6 * S; // generous touch target
+        return (x >= rect.x - pad &&
+            x <= rect.x + rect.w + pad &&
+            y >= rect.y - pad &&
+            y <= rect.y + rect.h + pad);
     }
-    // A tap carries coordinates so we can tell a pause-button press from a hop.
-    // Keyboard "primary" actions pass (-1, -1) so they never hit the button.
+    // A tap carries coordinates so we can tell a corner-button press from a hop.
+    // Keyboard "primary" actions pass (-1, -1) so they never hit a button.
     function onTap(x, y) {
+        // Mute is a global control — reachable in every state.
+        if (inRect(x, y, muteBtn)) {
+            toggleMute();
+            return;
+        }
         switch (state) {
             case 0 /* State.Menu */:
                 startGame();
@@ -164,7 +282,7 @@
                 if (paused) {
                     paused = false; // tapping anywhere resumes
                 }
-                else if (inPauseButton(x, y)) {
+                else if (inRect(x, y, btn)) {
                     paused = true;
                 }
                 else {
@@ -184,7 +302,11 @@
         onTap(e.clientX, e.clientY);
     }, { passive: false });
     window.addEventListener('keydown', function (e) {
-        if (e.code === 'KeyP' || e.code === 'Escape') {
+        if (e.code === 'KeyM') {
+            e.preventDefault();
+            toggleMute();
+        }
+        else if (e.code === 'KeyP' || e.code === 'Escape') {
             e.preventDefault();
             togglePause();
         }
@@ -524,6 +646,8 @@
                 ctx.globalAlpha = 1;
             }
         }
+        // Mute toggle is available in every state, so draw it last (on top).
+        drawMuteButton();
     }
     function drawPauseButton() {
         // faint rounded background
@@ -540,6 +664,46 @@
         ctx.fill();
         roundRect(cx + barW * 0.4, cy, barW, barH, barW * 0.4);
         ctx.fill();
+    }
+    function drawMuteButton() {
+        // faint rounded background
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        roundRect(muteBtn.x, muteBtn.y, muteBtn.w, muteBtn.h, 10 * S);
+        ctx.fill();
+        const cx = muteBtn.x + muteBtn.w * 0.42;
+        const cy = muteBtn.y + muteBtn.h / 2;
+        const u = muteBtn.w;
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = Math.max(2, 2.2 * S);
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        // speaker body + cone
+        ctx.beginPath();
+        ctx.moveTo(cx - u * 0.16, cy - u * 0.08);
+        ctx.lineTo(cx - u * 0.05, cy - u * 0.08);
+        ctx.lineTo(cx + u * 0.08, cy - u * 0.2);
+        ctx.lineTo(cx + u * 0.08, cy + u * 0.2);
+        ctx.lineTo(cx - u * 0.05, cy + u * 0.08);
+        ctx.lineTo(cx - u * 0.16, cy + u * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        if (muted) {
+            // slash across the speaker
+            ctx.beginPath();
+            ctx.moveTo(cx - u * 0.04, cy - u * 0.22);
+            ctx.lineTo(cx + u * 0.3, cy + u * 0.22);
+            ctx.stroke();
+        }
+        else {
+            // two sound-wave arcs
+            ctx.beginPath();
+            ctx.arc(cx + u * 0.05, cy, u * 0.16, -Math.PI / 3, Math.PI / 3);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(cx + u * 0.05, cy, u * 0.27, -Math.PI / 3, Math.PI / 3);
+            ctx.stroke();
+        }
     }
     function drawPauseOverlay() {
         ctx.fillStyle = 'rgba(10,10,25,0.6)';

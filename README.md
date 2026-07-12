@@ -2,12 +2,19 @@
 
 A one-tap endless bouncer. A ball runs along a scrolling track:
 
-- **Tap anywhere (or press Space)** to hop over the **red ground blocks**.
-- **Roll _under_ the cyan floating spikes** — if you jump into one, you're out.
+- **Tap anywhere (or press Space)** to hop over the **red ground blocks** — with
+  a springy "boing".
+- **Roll _under_ the cyan floating spikes** — if you jump into one, you're out
+  (to a comedic crash sound).
 - **Pause** any time with the top-right button (or `P` / `Esc`).
+- **Mute** with the speaker button next to pause (or `M`).
 
 The world speeds up the longer you survive. Hit anything and you're out; tap
-again to restart instantly. Your best score is saved on the device.
+again to restart instantly. Your best score — and your mute preference — are
+saved on the device.
+
+All sound effects are **synthesized at runtime with the Web Audio API**, so there
+are still no audio files to ship.
 
 Written in **TypeScript**, compiled to a single dependency-free HTML5 Canvas
 script — no runtime libraries, no assets. It runs in any modern mobile or
@@ -63,7 +70,11 @@ npm run serve      # static server without rebuilding
 - **States** — Menu → Playing (with pause) → Game Over → instant restart (with a
   short lockout so the killing tap doesn't immediately retry). Pausing freezes
   the world; the game also auto-pauses when the tab is hidden.
-- **Persistence** — best score in `localStorage` (`tapbounce.best`).
+- **Sound** — jump and crash effects are synthesized on the fly (oscillators +
+  a noise burst); the `AudioContext` is created lazily on the first tap to
+  satisfy autoplay policies.
+- **Persistence** — best score (`tapbounce.best`) and mute preference
+  (`tapbounce.muted`) in `localStorage`.
 
 ## Tuning
 
